@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <title>EduObserve Scheduler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Tab Navigation */
+        .tab-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+            background-color: #e9ecef;
+        }
+        
+        .tab-button.active {
+            color: #fff;
+            background-color: #3498db;
+            border-bottom: 3px solid #2980b9;
+        }
+        
+        .tab-button:hover {
+            background-color: #d6d8db;
+        }
+        
+        .tab-button.active:hover {
+            background-color: #2980b9;
+        }
+        
+        .tab-content {
+            padding: 20px;
+        }
+        
+        .tab-pane {
+            display: none;
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        /* Find Tab Styles */
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+        
+        .filter-group {
+            flex: 1;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .btn-link:hover {
+            color: #2980b9;
+        }
+        
+        /* Multi-Select & By Teacher View Styles */
+        .multi-select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            background: #fafafa;
+        }
+
+        .filter-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .filter-card-header label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .select-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .email-paste-input {
+            width: 100%;
+            min-height: 76px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .email-paste-help {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .combination-card {
+            border: 1px solid #b8d8ef;
+            border-left: 4px solid #3498db;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: #f7fbfe;
+        }
+
+        .combination-title {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .combination-period {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .checkbox-list {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            padding: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .free-period-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .free-period-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .free-period-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .badge-free {
+            background-color: #27ae60;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-partial {
+            background-color: #f39c12;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-none {
+            background-color: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .teachers-group {
+            margin-top: 8px;
+        }
+
+        .teachers-group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .teacher-chip-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .teacher-chip {
+            display: inline-flex;
+            align-items: center;
+            background: #e8f4fc;
+            color: #2980b9;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .teacher-chip:hover {
+            background: #d4eaf7;
+        }
+
+        .teacher-chip.busy {
+            background: #fdedec;
+            color: #c0392b;
+        }
+        
+        /* Results Section */
+        .results-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .section-header {
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .sort-btn {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .sort-btn:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .sort-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        .teacher-list {
+            padding: 20px;
+        }
+        
+        .teacher-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .teacher-item:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .teacher-info {
+            flex: 1;
+        }
+        
+        .teacher-name {
+            font-weight: 600;
+            color: #3498db;
+            margin-bottom: 5px;
+            cursor: pointer;
+            position: relative;
+            text-decoration: underline;
+            transition: color 0.3s ease;
+        }
+        
+        .teacher-name:hover {
+            color: #2980b9;
+        }
+        
+        .teacher-details {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Teacher Schedule Modal */
+        .teacher-schedule-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 3000;
+        }
+        
+        .teacher-schedule-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            min-width: 600px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        
+        .schedule-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .schedule-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .schedule-table th,
+        .schedule-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .schedule-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .schedule-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        th:hover {
+            background-color: #e9ecef;
+        }
+        
+        th.sortable::after {
+            content: ' ↕';
+            color: #999;
+        }
+        
+        th.sorted-asc::after {
+            content: ' ↑';
+            color: #3498db;
+        }
+        
+        th.sorted-desc::after {
+            content: ' ↓';
+            color: #3498db;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Loading and Empty States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            min-width: 400px;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .multi-select-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .teacher-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .sort-controls {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EduObserve Scheduler</h1>
+        
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-button active" data-tab="find">Find Teachers</button>
+                <button class="tab-button" data-tab="teacher">By Teacher</button>
+                <button class="tab-button" data-tab="observed">Observed</button>
+            </div>
+        
+            <div class="tab-content">
+                <!-- Find Tab -->
+                <div id="find-tab" class="tab-pane active">
+                    <div class="filter-section">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="daySelect">Day:</label>
+                                <select id="daySelect">
+                                    <option value="">Select Day</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="periodSelect">Period:</label>
+                                <select id="periodSelect">
+                                    <option value="">Select Period</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="filterTeachers()">Filter</button>
+                        </div>
+                    </div>
+                    
+                    <div id="not-observed-section" class="results-section" style="display: none;">
+                        <div class="section-header">
+                            <span class="section-title">Available for Observation</span>
+                            <div class="sort-controls">
+                                <button class="sort-btn" onclick="sortTeachers('notObserved', 'name')">Sort by Name</button>
+                                <button class="sort-btn" onclick="sortTeachers('notObserved', 'class')">Sort by Class</button>
+                                <button class="sort-btn" onclick="sortTeachers('notObserved', 'room')">Sort by Room</button>
+                            </div>
+                        </div>
+                        <div id="not-observed-list" class="teacher-list"></div>
+                    </div>
+                    
+                    <div id="observed-section" class="results-section" style="display: none;">
+                        <div class="section-header">
+                            <span class="section-title">Already Observed</span>
+                            <div class="sort-controls">
+                                <button class="sort-btn" onclick="sortTeachers('observed', 'name')">Sort by Name</button>
+                                <button class="sort-btn" onclick="sortTeachers('observed', 'class')">Sort by Class</button>
+                                <button class="sort-btn" onclick="sortTeachers('observed', 'room')">Sort by Room</button>
+                            </div>
+                        </div>
+                        <div id="observed-list" class="teacher-list"></div>
+                    </div>
+                </div>
+
+                <!-- By Teacher Tab -->
+                <div id="teacher-tab" class="tab-pane">
+                    <div class="filter-section">
+                        <div class="multi-select-grid">
+                            <!-- Teachers Multi-Select -->
+                            <div class="filter-card">
+                                <div class="filter-card-header">
+                                    <label>Select Teachers:</label>
+                                    <div class="select-actions">
+                                        <button class="btn-link" onclick="selectAll('teacher-checkboxes', true)">Select All</button>
+                                        <button class="btn-link" onclick="selectAll('teacher-checkboxes', false)">Clear</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="teacherSearchInput" class="search-input" placeholder="Search teacher..." onkeyup="filterTeacherCheckboxes()">
+                                <textarea id="teacherEmailInput" class="email-paste-input" placeholder="Paste teacher emails, separated by commas, spaces, or new lines"></textarea>
+                                <div class="email-paste-help">Paste emails to select matching teachers.</div>
+                                <button class="btn-link" onclick="selectTeachersByEmail()">Select pasted emails</button>
+                                <div id="teacher-checkboxes" class="checkbox-list"></div>
+                            </div>
+
+                            <!-- Days Multi-Select -->
+                            <div class="filter-card">
+                                <div class="filter-card-header">
+                                    <label>Select Days:</label>
+                                    <div class="select-actions">
+                                        <button class="btn-link" onclick="selectAll('day-checkboxes', true)">Select All</button>
+                                        <button class="btn-link" onclick="selectAll('day-checkboxes', false)">Clear</button>
+                                    </div>
+                                </div>
+                                <div id="day-checkboxes" class="checkbox-list"></div>
+                            </div>
+
+                            <!-- Periods Multi-Select -->
+                            <div class="filter-card">
+                                <div class="filter-card-header">
+                                    <label>Select Periods:</label>
+                                    <div class="select-actions">
+                                        <button class="btn-link" onclick="selectAll('period-checkboxes', true)">Select All</button>
+                                        <button class="btn-link" onclick="selectAll('period-checkboxes', false)">Clear</button>
+                                    </div>
+                                </div>
+                                <div id="period-checkboxes" class="checkbox-list"></div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button class="btn btn-primary" onclick="findCommonFrees()">Find Common Frees</button>
+                        </div>
+                    </div>
+
+                    <div id="common-frees-section" class="results-section" style="display: none;">
+                        <div class="section-header">
+                            <span class="section-title">Common Frees</span>
+                            <span id="common-frees-count" style="color: #666; font-size: 14px;"></span>
+                        </div>
+                        <div id="common-frees-list" style="padding: 20px;"></div>
+                    </div>
+                </div>
+                
+                <!-- Observed Tab -->
+                <div id="observed-tab" class="tab-pane">
+                    <div class="results-section">
+                        <div class="section-header">
+                            <span class="section-title">Observation Records</span>
+                        </div>
+                        <div class="table-container">
+                            <table id="observed-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" onclick="sortObservedTable('teacherName')">Teacher Name</th>
+                                        <th class="sortable" onclick="sortObservedTable('date')">Date</th>
+                                        <th class="sortable" onclick="sortObservedTable('className')">Class</th>
+                                        <th class="sortable" onclick="sortObservedTable('observerEmail')">Observer</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="observed-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Observation Modal -->
+    <div id="observation-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Record Observation</h3>
+            </div>
+            <div class="form-group">
+                <label for="observation-teacher">Teacher:</label>
+                <input type="text" id="observation-teacher" readonly>
+            </div>
+            <div class="form-group">
+                <label for="observation-date">Date:</label>
+                <input type="date" id="observation-date">
+            </div>
+            <div class="form-group">
+                <label for="observation-class">Class Name:</label>
+                <input type="text" id="observation-class">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeObservationModal()">Cancel</button>
+                <button class="btn btn-success" onclick="saveObservation()">Save Observation</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Teacher Schedule Modal -->
+    <div id="teacher-schedule-modal" class="teacher-schedule-modal">
+        <div class="teacher-schedule-content">
+            <div class="schedule-header">
+                <h3 class="schedule-title" id="schedule-teacher-name">Teacher Schedule</h3>
+            </div>
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Period</th>
+                        <th>Time</th>
+                        <th>Class</th>
+                        <th>Room</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-table-body">
+                </tbody>
+            </table>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeTeacherScheduleModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentTeachers = { notObserved: [], observed: [] };
+        let observedRecords = [];
+        let currentObservationTeacher = null;
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
+            loadDropdownOptions();
+            loadObservedRecords();
+            
+            // Set today's date as default
+            document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
+        });
+        
+        // Tab functionality
+        function initializeTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+        }
+        
+        function switchTab(tabId) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            
+            // Update tab panes
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            
+            // Load data if needed
+            if (tabId === 'observed') {
+                loadObservedRecords();
+            }
+        }
+        
+        // Load dropdown options
+        function loadDropdownOptions() {
+            google.script.run
+                .withSuccessHandler(function(options) {
+                    const daySelect = document.getElementById('daySelect');
+                    const periodSelect = document.getElementById('periodSelect');
+                    
+                    // Clear existing options
+                    daySelect.innerHTML = '<option value="">Select Day</option>';
+                    periodSelect.innerHTML = '<option value="">Select Period</option>';
+                    
+                    // Add day options (Find tab)
+                    options.days.forEach(day => {
+                        const option = document.createElement('option');
+                        option.value = day;
+                        option.textContent = day;
+                        daySelect.appendChild(option);
+                    });
+                    
+                    // Add period options (Find tab)
+                    options.periods.forEach(period => {
+                        const option = document.createElement('option');
+                        option.value = period;
+                        option.textContent = period;
+                        periodSelect.appendChild(option);
+                    });
+
+                    // Populate Multi-Select options (By Teacher tab)
+                    populateCheckboxes('day-checkboxes', options.days, 'day');
+                    populateCheckboxes('period-checkboxes', options.periods, 'period');
+                    populateTeacherCheckboxes('teacher-checkboxes', options.teachers || []);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error loading dropdown options:', error);
+                    alert('Error loading dropdown options. Please refresh the page.');
+                })
+                .getDropdownOptions();
+        }
+
+        // Helper to populate string checkboxes
+        function populateCheckboxes(containerId, items, prefix) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="${prefix}_${index}" value="${item}">
+                    <label for="${prefix}_${index}">${item}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Helper to populate teacher checkboxes
+        function populateTeacherCheckboxes(containerId, teachers) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            teachers.forEach((teacher, index) => {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item teacher-item-check';
+                div.setAttribute('data-name', teacher.name.toLowerCase());
+                div.innerHTML = `
+                    <input type="checkbox" id="teacher_${index}" value="${teacher.email}">
+                    <label for="teacher_${index}">${teacher.name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Select All / Clear helper for multi-select cards
+        function selectAll(containerId, isSelect) {
+            const container = document.getElementById(containerId);
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                // If item is hidden by search, skip if clearing or selecting
+                if (cb.closest('.checkbox-item').style.display !== 'none') {
+                    cb.checked = isSelect;
+                }
+            });
+        }
+
+        // Search filter for teacher list
+        function filterTeacherCheckboxes() {
+            const query = document.getElementById('teacherSearchInput').value.toLowerCase();
+            const items = document.querySelectorAll('#teacher-checkboxes .teacher-item-check');
+            items.forEach(item => {
+                const name = item.getAttribute('data-name');
+                if (name.includes(query)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Find Common Frees (By Teacher View)
+        function findCommonFrees() {
+            const selectedTeachers = Array.from(document.querySelectorAll('#teacher-checkboxes input:checked')).map(cb => cb.value);
+            const selectedDays = Array.from(document.querySelectorAll('#day-checkboxes input:checked')).map(cb => cb.value);
+            const selectedPeriods = Array.from(document.querySelectorAll('#period-checkboxes input:checked')).map(cb => cb.value);
+
+            if (selectedTeachers.length === 0) {
+                alert('Please select at least one teacher.');
+                return;
+            }
+            if (selectedDays.length === 0) {
+                alert('Please select at least one day.');
+                return;
+            }
+            if (selectedPeriods.length === 0) {
+                alert('Please select at least one period.');
+                return;
+            }
+
+            const resultsSection = document.getElementById('common-frees-section');
+            const resultsList = document.getElementById('common-frees-list');
+            resultsSection.style.display = 'block';
+            resultsList.innerHTML = '<div class="loading">Searching common free periods...</div>';
+
+            google.script.run
+                .withSuccessHandler(function(data) {
+                    const results = processCommonFreeData(
+                        data,
+                        selectedTeachers,
+                        selectedDays,
+                        selectedPeriods
+                    );
+                    displayCommonFrees(results);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error finding common frees:', error);
+                    resultsList.innerHTML = '<div class="empty-state">Error retrieving availability data. Please try again.</div>';
+                })
+                .getCommonFreeData(selectedTeachers, selectedDays, selectedPeriods);
+        }
+
+        // Build availability results in the browser from raw timetable rows.
+        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods) {
+            const teacherNames = {};
+            const busySet = new Set();
+
+            (data.teachers || []).forEach(teacher => {
+                teacherNames[teacher.email] = teacher.name || teacher.email;
+            });
+            (data.scheduleRows || []).forEach(row => {
+                teacherNames[row.email] = row.name || row.email;
+                busySet.add(`${row.email}|${row.day}|${row.period}`);
+            });
+
+            const results = [];
+            selectedDays.forEach(day => {
+                selectedPeriods.forEach(period => {
+                    const freeTeachers = [];
+                    const busyTeachers = [];
+
+                    selectedTeachers.forEach(email => {
+                        const teacher = {
+                            email: email,
+                            name: teacherNames[email] || email
+                        };
+                        if (busySet.has(`${email}|${day}|${period}`)) {
+                            busyTeachers.push(teacher);
+                        } else {
+                            freeTeachers.push(teacher);
+                        }
+                    });
+
+                    results.push({
+                        day: day,
+                        period: period,
+                        freeTeachers: freeTeachers,
+                        busyTeachers: busyTeachers,
+                        freeCount: freeTeachers.length,
+                        totalSelectedCount: selectedTeachers.length
+                    });
+                });
+            });
+
+            results.sort((a, b) => {
+                if (b.freeCount !== a.freeCount) return b.freeCount - a.freeCount;
+                const dayCompare = a.day.localeCompare(b.day, undefined, { numeric: true, sensitivity: 'base' });
+                if (dayCompare !== 0) return dayCompare;
+                return a.period.localeCompare(b.period, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            return {
+                periods: results,
+                combinations: buildCompleteCombinations(results, selectedTeachers.length)
+            };
+        }
+
+        // Build and rank every period set whose free-teacher union covers everyone.
+        function buildCompleteCombinations(results, selectedTeacherCount) {
+            const usableResults = results.filter(result => result.freeCount > 0);
+            const combinations = [];
+
+            function visit(startIndex, selectedPeriods, coveredEmails) {
+                if (coveredEmails.size === selectedTeacherCount) {
+                    combinations.push({
+                        periods: selectedPeriods.slice(),
+                        freeCount: selectedPeriods.reduce((total, period) => total + period.freeCount, 0)
+                    });
+                    return;
+                }
+
+                for (let index = startIndex; index < usableResults.length; index++) {
+                    const period = usableResults[index];
+                    const nextCoveredEmails = new Set(coveredEmails);
+                    period.freeTeachers.forEach(teacher => nextCoveredEmails.add(teacher.email));
+                    if (nextCoveredEmails.size === coveredEmails.size) continue;
+
+                    selectedPeriods.push(period);
+                    visit(index + 1, selectedPeriods, nextCoveredEmails);
+                    selectedPeriods.pop();
+                }
+            }
+
+            visit(0, [], new Set());
+            combinations.sort((a, b) => {
+                if (a.periods.length !== b.periods.length) return a.periods.length - b.periods.length;
+                if (a.freeCount !== b.freeCount) return b.freeCount - a.freeCount;
+                return a.periods.map(period => period.day + period.period).join('|')
+                    .localeCompare(b.periods.map(period => period.day + period.period).join('|'), undefined, { numeric: true });
+            });
+
+            return combinations;
+        }
+
+        // Display Common Frees Results
+        function displayCommonFrees(results) {
+            const resultsList = document.getElementById('common-frees-list');
+            const countSpan = document.getElementById('common-frees-count');
+            const periods = results && results.periods ? results.periods : [];
+
+            if (periods.length === 0) {
+                resultsList.innerHTML = '<div class="empty-state">No matching data found for the selected criteria.</div>';
+                countSpan.textContent = '';
+                return;
+            }
+
+            countSpan.textContent = `(${periods.length} day/period combination${periods.length > 1 ? 's' : ''})`;
+
+            const html = periods.map(item => {
+                const freeCount = item.freeCount;
+                const totalCount = item.totalSelectedCount;
+                
+                let badgeClass = 'badge-partial';
+                if (freeCount === totalCount) badgeClass = 'badge-free';
+                else if (freeCount === 0) badgeClass = 'badge-none';
+
+                const freeTeachersHtml = item.freeTeachers.length > 0 
+                    ? item.freeTeachers.map(t => `
+                        <span class="teacher-chip" onclick="showTeacherSchedule('${t.email}', '${t.name}')" title="Click to view schedule">
+                            ${t.name}
+                        </span>
+                    `).join('') 
+                    : '<span style="color: #999; font-size: 13px;">None</span>';
+
+                const busyTeachersHtml = item.busyTeachers.length > 0
+                    ? item.busyTeachers.map(t => `
+                        <span class="teacher-chip busy" onclick="showTeacherSchedule('${t.email}', '${t.name}')" title="Click to view schedule">
+                            ${t.name}
+                        </span>
+                    `).join('')
+                    : '<span style="color: #999; font-size: 13px;">None</span>';
+
+                return `
+                    <div class="free-period-card">
+                        <div class="free-period-header">
+                            <span class="free-period-title">${item.day} - ${item.period}</span>
+                            <span class="${badgeClass}">${freeCount} / ${totalCount} Teachers Free</span>
+                        </div>
+                        <div class="teachers-group">
+                            <div class="teachers-group-title">Free Teachers (${item.freeTeachers.length}):</div>
+                            <div class="teacher-chip-list">${freeTeachersHtml}</div>
+                        </div>
+                        ${item.busyTeachers.length > 0 ? `
+                        <div class="teachers-group" style="margin-top: 12px;">
+                            <div class="teachers-group-title">Busy Teachers (${item.busyTeachers.length}):</div>
+                            <div class="teacher-chip-list">${busyTeachersHtml}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            resultsList.innerHTML = html;
+
+            const combinations = buildCombinationHtml(results);
+            resultsList.innerHTML = combinations + html;
+        }
+
+        // Select teacher checkboxes from a pasted email list.
+        function selectTeachersByEmail() {
+            const pasted = document.getElementById('teacherEmailInput').value;
+            const emails = new Set(pasted.split(/[\s,;]+/).map(email => email.trim().toLowerCase()).filter(Boolean));
+            const matched = new Set();
+
+            document.querySelectorAll('#teacher-checkboxes input[type="checkbox"]').forEach(checkbox => {
+                const matches = emails.has(checkbox.value.trim().toLowerCase());
+                checkbox.checked = matches;
+                if (matches) matched.add(checkbox.value.trim().toLowerCase());
+            });
+
+            const missing = Array.from(emails).filter(email => !matched.has(email));
+            if (missing.length > 0) {
+                alert('These emails were not found: ' + missing.join(', '));
+            }
+        }
+
+        function buildCombinationHtml(results) {
+            const combinations = results.combinations || [];
+            if (combinations.length === 0) {
+                return '<div class="empty-state">No combination of the selected day/periods covers all selected teachers.</div>';
+            }
+
+            const combinationCards = combinations.map((combination, index) => {
+                const periods = combination.periods.map(item => {
+                    const freeNames = item.freeTeachers.map(teacher => teacher.name).join(', ') || 'None';
+                    return `<div class="combination-period"><strong>${item.day} - ${item.period}</strong>: ${freeNames}</div>`;
+                }).join('');
+                return `<div class="combination-card"><div class="combination-title">COMBO ${index + 1}</div>${periods}</div>`;
+            }).join('');
+
+            return `<div class="teachers-group-title" style="margin-bottom: 10px;">Combinations covering all selected teachers</div>${combinationCards}`;
+        }
+        
+        // Filter teachers (Find tab)
+        function filterTeachers() {
+            const day = document.getElementById('daySelect').value;
+            const period = document.getElementById('periodSelect').value;
+            
+            if (!day || !period) {
+                alert('Please select both day and period.');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('not-observed-section').style.display = 'block';
+            document.getElementById('observed-section').style.display = 'block';
+            document.getElementById('not-observed-list').innerHTML = '<div class="loading">Loading...</div>';
+            document.getElementById('observed-list').innerHTML = '<div class="loading">Loading...</div>';
+            
+            google.script.run
+                .withSuccessHandler(function(teachers) {
+                    currentTeachers = teachers;
+                    displayTeachers('notObserved', teachers.notObserved);
+                    displayTeachers('observed', teachers.observed);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error filtering teachers:', error);
+                    alert('Error filtering teachers. Please try again.');
+                })
+                .getTeachersForDayPeriod(day, period);
+        }
+        
+        // Display teachers
+        function displayTeachers(section, teachers) {
+            const listElement = document.getElementById(`${section.replace('O', '-o')}-list`);
+            
+            if (teachers.length === 0) {
+                listElement.innerHTML = '<div class="empty-state">No teachers found for this selection.</div>';
+                return;
+            }
+            
+            const html = teachers.map(teacher => `
+                <div class="teacher-item">
+                    <div class="teacher-info">
+                        <div class="teacher-name" onclick="showTeacherSchedule('${teacher.email}', '${teacher.teacherName}')">
+                            ${teacher.teacherName}
+                        </div>
+                        <div class="teacher-details">
+                            Class: ${teacher.className} | Room: ${teacher.room}
+                        </div>
+                    </div>
+                    ${section === 'notObserved' ? `<button class="btn btn-success" onclick="openObservationModal('${teacher.email}', '${teacher.teacherName}', '${teacher.className}')">Log Observation</button>` : ''}
+                </div>
+            `).join('');
+            
+            listElement.innerHTML = html;
+        }
+        
+        // Sort teachers
+        function sortTeachers(section, sortBy) {
+            const teachers = currentTeachers[section];
+            
+            // Remove active class from all sort buttons in this section
+            const sectionElement = document.getElementById(`${section.replace('O', '-o')}-section`);
+            sectionElement.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            teachers.sort((a, b) => {
+                let aValue, bValue;
+                switch (sortBy) {
+                    case 'name':
+                        aValue = a.teacherName;
+                        bValue = b.teacherName;
+                        break;
+                    case 'class':
+                        aValue = a.className;
+                        bValue = b.className;
+                        break;
+                    case 'room':
+                        aValue = a.room;
+                        bValue = b.room;
+                        break;
+                    default:
+                        return 0;
+                }
+                return aValue.localeCompare(bValue);
+            });
+            
+            displayTeachers(section, teachers);
+        }
+        
+        // Teacher schedule functions
+        function showTeacherSchedule(teacherEmail, teacherName) {
+            document.getElementById('schedule-teacher-name').textContent = `${teacherName}'s Schedule`;
+            document.getElementById('schedule-table-body').innerHTML = '<tr><td colspan="5" style="text-align: center;">Loading...</td></tr>';
+            document.getElementById('teacher-schedule-modal').style.display = 'block';
+            
+            // Get teacher schedule from server
+            google.script.run
+                .withSuccessHandler(function(schedule) {
+                    displayTeacherSchedule(schedule);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error getting teacher schedule:', error);
+                    document.getElementById('schedule-table-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #d32f2f;">Error loading schedule</td></tr>';
+                })
+                .getTeacherSchedule(teacherEmail);
+        }
+        
+        function displayTeacherSchedule(schedule) {
+            const tbody = document.getElementById('schedule-table-body');
+            
+            if (schedule.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No classes found for this teacher</td></tr>';
+                return;
+            }
+            
+            const html = schedule.map(item => `
+                <tr>
+                    <td>${item.day}</td>
+                    <td>${item.periodName}</td>
+                    <td>${item.time}</td>
+                    <td>${item.className}</td>
+                    <td>${item.room}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+        
+        function closeTeacherScheduleModal() {
+            document.getElementById('teacher-schedule-modal').style.display = 'none';
+        }
+        
+        // Observation modal functions
+        function openObservationModal(teacherEmail, teacherName, className) {
+            currentObservationTeacher = { email: teacherEmail, name: teacherName };
+            document.getElementById('observation-teacher').value = teacherName;
+            document.getElementById('observation-class').value = className;
+            document.getElementById('observation-modal').style.display = 'block';
+        }
+        
+        function closeObservationModal() {
+            document.getElementById('observation-modal').style.display = 'none';
+            currentObservationTeacher = null;
+        }
+        
+        function saveObservation() {
+            const date = document.getElementById('observation-date').value;
+            const className = document.getElementById('observation-class').value;
+            
+            if (!date || !className) {
+                alert('Please fill in all fields.');
+                return;
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        alert('Observation recorded successfully!');
+                        closeObservationModal();
+                        // Refresh the current filter
+                        filterTeachers();
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error saving observation:', error);
+                    alert('Error saving observation. Please try again.');
+                })
+                .addObservation(currentObservationTeacher.email, currentObservationTeacher.name, date, className);
+        }
+        
+        // Load observed records
+        function loadObservedRecords() {
+            google.script.run
+                .withSuccessHandler(function(records) {
+                    observedRecords = records;
+                    displayObservedRecords(records);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error loading observed records:', error);
+                    document.getElementById('observed-table-body').innerHTML = '<tr><td colspan="4">Error loading records</td></tr>';
+                })
+                .getObservedList();
+        }
+        
+        // Display observed records
+        function displayObservedRecords(records) {
+            const tbody = document.getElementById('observed-table-body');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No observation records found</td></tr>';
+                return;
+            }
+            
+            const html = records.map(record => `
+                <tr>
+                    <td class="teacher-name" onclick="showTeacherSchedule('${record.teacherEmail}', '${record.teacherName}')">
+                        ${record.teacherName}
+                    </td>
+                    <td>${formatDate(record.date)}</td>
+                    <td>${record.className}</td>
+                    <td>${record.observerEmail}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+        
+        // Sort observed table
+        let observedSortColumn = '';
+        let observedSortDirection = 'asc';
+        
+        function sortObservedTable(column) {
+            // Update sort direction
+            if (observedSortColumn === column) {
+                observedSortDirection = observedSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                observedSortColumn = column;
+                observedSortDirection = 'asc';
+            }
+            
+            // Update header classes
+            document.querySelectorAll('#observed-table th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            event.target.classList.add(`sorted-${observedSortDirection}`);
+            
+            // Sort records
+            const sortedRecords = [...observedRecords].sort((a, b) => {
+                let aValue = a[column];
+                let bValue = b[column];
+                
+                if (column === 'date') {
+                    aValue = new Date(aValue);
+                    bValue = new Date(bValue);
+                }
+                
+                if (aValue < bValue) return observedSortDirection === 'asc' ? -1 : 1;
+                if (aValue > bValue) return observedSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            displayObservedRecords(sortedRecords);
+        }
+        
+        // Helper function to format date
+        function formatDate(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            return d.toLocaleDateString();
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const observationModal = document.getElementById('observation-modal');
+            const scheduleModal = document.getElementById('teacher-schedule-modal');
+            
+            if (event.target === observationModal) {
+                closeObservationModal();
+            }
+            if (event.target === scheduleModal) {
+                closeTeacherScheduleModal();
+            }
+        }
+    </script>
+</body>
+</html>
