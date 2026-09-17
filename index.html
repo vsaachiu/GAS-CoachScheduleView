@@ -760,7 +760,11 @@
                                 <div id="period-checkboxes" class="checkbox-list"></div>
                             </div>
                         </div>
-                        <div style="margin-top: 15px; text-align: right;">
+                        <div style="margin-top: 15px; display: flex; justify-content: flex-end; align-items: center; gap: 15px;">
+                            <label class="checkbox-item" style="padding: 0;">
+                                <input type="checkbox" id="cover-all-combos">
+                                Combos to cover all
+                            </label>
                             <button class="btn btn-primary" onclick="findCommonFrees()">Find Common Frees</button>
                         </div>
                     </div>
@@ -993,6 +997,7 @@
             const selectedTeachers = Array.from(document.querySelectorAll('#teacher-checkboxes input:checked')).map(cb => cb.value);
             const selectedDays = Array.from(document.querySelectorAll('#day-checkboxes input:checked')).map(cb => cb.value);
             const selectedPeriods = Array.from(document.querySelectorAll('#period-checkboxes input:checked')).map(cb => cb.value);
+            const includeCoveringCombos = document.getElementById('cover-all-combos').checked;
 
             if (selectedTeachers.length === 0) {
                 alert('Please select at least one teacher.');
@@ -1018,7 +1023,8 @@
                         data,
                         selectedTeachers,
                         selectedDays,
-                        selectedPeriods
+                        selectedPeriods,
+                        includeCoveringCombos
                     );
                     displayCommonFrees(results);
                 })
@@ -1030,7 +1036,7 @@
         }
 
         // Build availability results in the browser from raw timetable rows.
-        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods) {
+        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods, includeCoveringCombos) {
             const teacherNames = {};
             const busySet = new Set();
 
@@ -1080,45 +1086,92 @@
 
             return {
                 periods: results,
-                combinations: buildCompleteCombinations(results, selectedTeachers.length)
+                combinations: includeCoveringCombos
+                    ? findCoveringCombinations(results, selectedTeachers.length)
+                    : [],
+                includeCoveringCombos: includeCoveringCombos
             };
         }
 
-        // Build and rank every period set whose free-teacher union covers everyone.
-        function buildCompleteCombinations(results, selectedTeacherCount) {
+        // Find a small number of near-optimal covers within a fixed browser budget.
+        function findCoveringCombinations(results, selectedTeacherCount) {
+            const timeBudgetMs = 150;
+            const beamWidth = 128;
+            const candidateLimit = 60;
+            const deadline = performance.now() + timeBudgetMs;
             const usableResults = results.filter(result => result.freeCount > 0);
+            const candidates = usableResults.slice(0, candidateLimit);
             const combinations = [];
 
-            function visit(startIndex, selectedPeriods, coveredEmails) {
-                if (coveredEmails.size === selectedTeacherCount) {
-                    combinations.push({
-                        periods: selectedPeriods.slice(),
-                        freeCount: selectedPeriods.reduce((total, period) => total + period.freeCount, 0)
-                    });
-                    return;
-                }
-
-                for (let index = startIndex; index < usableResults.length; index++) {
-                    const period = usableResults[index];
-                    const nextCoveredEmails = new Set(coveredEmails);
-                    period.freeTeachers.forEach(teacher => nextCoveredEmails.add(teacher.email));
-                    if (nextCoveredEmails.size === coveredEmails.size) continue;
-
-                    selectedPeriods.push(period);
-                    visit(index + 1, selectedPeriods, nextCoveredEmails);
-                    selectedPeriods.pop();
-                }
+            function addCombination(periods) {
+                const key = periods.map(period => `${period.day}|${period.period}`).sort().join('::');
+                if (combinations.some(combination => combination.key === key)) return;
+                combinations.push({
+                    key: key,
+                    periods: periods.slice(),
+                    freeCount: periods.reduce((total, period) => total + period.freeCount, 0)
+                });
             }
 
-            visit(0, [], new Set());
+            // Greedy set cover gives an immediate useful result if coverage exists.
+            const greedyPeriods = [];
+            const greedyCovered = new Set();
+            while (greedyCovered.size < selectedTeacherCount) {
+                let bestPeriod = null;
+                let bestNewTeachers = [];
+                usableResults.forEach(period => {
+                    if (greedyPeriods.includes(period)) return;
+                    const newTeachers = period.freeTeachers.filter(teacher => !greedyCovered.has(teacher.email));
+                    if (newTeachers.length > bestNewTeachers.length) {
+                        bestPeriod = period;
+                        bestNewTeachers = newTeachers;
+                    }
+                });
+                if (!bestPeriod) break;
+                greedyPeriods.push(bestPeriod);
+                bestNewTeachers.forEach(teacher => greedyCovered.add(teacher.email));
+            }
+            if (greedyCovered.size === selectedTeacherCount) addCombination(greedyPeriods);
+
+            const states = [{ periods: [], covered: new Set(), freeCount: 0, nextIndex: 0 }];
+            let depth = 0;
+            while (states.length > 0 && depth < selectedTeacherCount && performance.now() < deadline) {
+                const nextStates = [];
+                states.forEach(state => {
+                    for (let index = state.nextIndex; index < candidates.length; index++) {
+                        if (performance.now() >= deadline) break;
+                        const period = candidates[index];
+                        const nextCovered = new Set(state.covered);
+                        period.freeTeachers.forEach(teacher => nextCovered.add(teacher.email));
+                        if (nextCovered.size === state.covered.size) continue;
+
+                        const nextPeriods = state.periods.concat(period);
+                        if (nextCovered.size === selectedTeacherCount) addCombination(nextPeriods);
+                        else nextStates.push({
+                            periods: nextPeriods,
+                            covered: nextCovered,
+                            freeCount: state.freeCount + period.freeCount,
+                            nextIndex: index + 1
+                        });
+                    }
+                });
+
+                nextStates.sort((a, b) => {
+                    if (b.covered.size !== a.covered.size) return b.covered.size - a.covered.size;
+                    if (b.freeCount !== a.freeCount) return b.freeCount - a.freeCount;
+                    return a.periods.length - b.periods.length;
+                });
+                states.length = 0;
+                states.push(...nextStates.slice(0, beamWidth));
+                depth++;
+            }
+
             combinations.sort((a, b) => {
                 if (a.periods.length !== b.periods.length) return a.periods.length - b.periods.length;
                 if (a.freeCount !== b.freeCount) return b.freeCount - a.freeCount;
-                return a.periods.map(period => period.day + period.period).join('|')
-                    .localeCompare(b.periods.map(period => period.day + period.period).join('|'), undefined, { numeric: true });
+                return a.key.localeCompare(b.key, undefined, { numeric: true });
             });
-
-            return combinations;
+            return combinations.slice(0, 3);
         }
 
         // Display Common Frees Results
@@ -1181,7 +1234,7 @@
 
             resultsList.innerHTML = html;
 
-            const combinations = buildCombinationHtml(results);
+            const combinations = results.includeCoveringCombos ? buildCombinationHtml(results) : '';
             resultsList.innerHTML = combinations + html;
         }
 
