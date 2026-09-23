@@ -318,6 +318,13 @@
             margin-top: 8px;
         }
 
+        .teachers-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
         .teachers-group-title {
             font-size: 13px;
             font-weight: 600;
@@ -863,6 +870,7 @@
         let currentTeachers = { notObserved: [], observed: [] };
         let observedRecords = [];
         let currentObservationTeacher = null;
+        let currentCommonFreePeriods = [];
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1195,6 +1203,7 @@
             const resultsList = document.getElementById('common-frees-list');
             const countSpan = document.getElementById('common-frees-count');
             const periods = results && results.periods ? results.periods : [];
+            currentCommonFreePeriods = periods;
 
             if (periods.length === 0) {
                 resultsList.innerHTML = '<div class="empty-state">No matching data found for the selected criteria.</div>';
@@ -1228,6 +1237,9 @@
                     `).join('')
                     : '<span style="color: #999; font-size: 13px;">None</span>';
 
+                const freeCopyDisabled = item.freeTeachers.length === 0 ? 'disabled' : '';
+                const busyCopyDisabled = item.busyTeachers.length === 0 ? 'disabled' : '';
+
                 return `
                     <div class="free-period-card">
                         <div class="free-period-header">
@@ -1235,15 +1247,19 @@
                             <span class="${badgeClass}">${freeCount} / ${totalCount} Teachers Free</span>
                         </div>
                         <div class="teachers-group">
-                            <div class="teachers-group-title">Free Teachers (${item.freeTeachers.length}):</div>
+                            <div class="teachers-group-header">
+                                <div class="teachers-group-title">Free Teachers (${item.freeTeachers.length}):</div>
+                                <button class="btn-link" ${freeCopyDisabled} onclick='copyTeacherEmailsForPeriod(${JSON.stringify(item.day)}, ${JSON.stringify(item.period)}, "free")'>Copy Emails</button>
+                            </div>
                             <div class="teacher-chip-list">${freeTeachersHtml}</div>
                         </div>
-                        ${item.busyTeachers.length > 0 ? `
                         <div class="teachers-group" style="margin-top: 12px;">
-                            <div class="teachers-group-title">Busy Teachers (${item.busyTeachers.length}):</div>
+                            <div class="teachers-group-header">
+                                <div class="teachers-group-title">Busy Teachers (${item.busyTeachers.length}):</div>
+                                <button class="btn-link" ${busyCopyDisabled} onclick='copyTeacherEmailsForPeriod(${JSON.stringify(item.day)}, ${JSON.stringify(item.period)}, "busy")'>Copy Emails</button>
+                            </div>
                             <div class="teacher-chip-list">${busyTeachersHtml}</div>
                         </div>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -1252,6 +1268,56 @@
 
             const combinations = results.includeCoveringCombos ? buildCombinationHtml(results) : '';
             resultsList.innerHTML = combinations + html;
+        }
+
+        async function copyTeacherEmailsForPeriod(day, period, group) {
+            const periodMatch = currentCommonFreePeriods.find(item => item.day === day && item.period === period);
+            if (!periodMatch) {
+                alert('Could not find this day/period in the current results.');
+                return;
+            }
+
+            const teachers = group === 'free' ? periodMatch.freeTeachers : periodMatch.busyTeachers;
+            if (!teachers || teachers.length === 0) {
+                alert(`No ${group} teacher emails to copy for ${day} - ${period}.`);
+                return;
+            }
+
+            const emailText = teachers.map(teacher => teacher.email).join('\n');
+            const copied = await writeTextToClipboard(emailText);
+            if (!copied) {
+                alert('Clipboard access failed. Please copy manually from the list.');
+                return;
+            }
+
+            alert(`Copied ${teachers.length} ${group} teacher email${teachers.length === 1 ? '' : 's'} for ${day} - ${period}.`);
+        }
+
+        async function writeTextToClipboard(text) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+            } catch (error) {
+                // Fall through to legacy copy path.
+            }
+
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            let didCopy = false;
+            try {
+                didCopy = document.execCommand('copy');
+            } catch (error) {
+                didCopy = false;
+            }
+            document.body.removeChild(textArea);
+            return didCopy;
         }
 
         // Select teacher checkboxes from a pasted email list.
