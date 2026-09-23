@@ -2,7 +2,7 @@
 <html>
 <head>
     <base target="_top">
-    <title>EduObserve Scheduler</title>
+    <title>Coaching Scheduler</title>
     <style>
         * {
             margin: 0;
@@ -1110,9 +1110,11 @@
 
         // Find a small number of near-optimal covers within a fixed browser budget.
         function findCoveringCombinations(results, selectedTeacherCount, timeBudgetMs) {
+            const requestedBudget = Number(timeBudgetMs);
+            const boundedBudget = Number.isFinite(requestedBudget) ? requestedBudget : 150;
             const beamWidth = 128;
             const candidateLimit = 60;
-            const deadline = performance.now() + timeBudgetMs;
+            const deadline = performance.now() + Math.min(2000, Math.max(10, boundedBudget));
             const usableResults = results.filter(result => result.freeCount > 0);
             const candidates = usableResults.slice(0, candidateLimit);
             const combinations = [];
