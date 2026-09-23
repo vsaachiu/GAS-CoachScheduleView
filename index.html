@@ -765,6 +765,10 @@
                                 <input type="checkbox" id="cover-all-combos">
                                 Combos to cover all
                             </label>
+                            <label for="combo-time-budget" style="font-size: 13px; color: #555;">
+                                Search time (ms):
+                                <input type="number" id="combo-time-budget" value="150" min="10" max="2000" step="10" style="width: 78px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                            </label>
                             <button class="btn btn-primary" onclick="findCommonFrees()">Find Common Frees</button>
                         </div>
                     </div>
@@ -998,6 +1002,7 @@
             const selectedDays = Array.from(document.querySelectorAll('#day-checkboxes input:checked')).map(cb => cb.value);
             const selectedPeriods = Array.from(document.querySelectorAll('#period-checkboxes input:checked')).map(cb => cb.value);
             const includeCoveringCombos = document.getElementById('cover-all-combos').checked;
+            const comboTimeBudgetMs = getComboTimeBudget();
 
             if (selectedTeachers.length === 0) {
                 alert('Please select at least one teacher.');
@@ -1024,7 +1029,8 @@
                         selectedTeachers,
                         selectedDays,
                         selectedPeriods,
-                        includeCoveringCombos
+                        includeCoveringCombos,
+                        comboTimeBudgetMs
                     );
                     displayCommonFrees(results);
                 })
@@ -1035,8 +1041,17 @@
                 .getCommonFreeData(selectedTeachers, selectedDays, selectedPeriods);
         }
 
+        function getComboTimeBudget() {
+            const input = document.getElementById('combo-time-budget');
+            const requestedBudget = Number(input.value);
+            const budget = Number.isFinite(requestedBudget) ? requestedBudget : 150;
+            const boundedBudget = Math.min(2000, Math.max(10, budget));
+            input.value = boundedBudget;
+            return boundedBudget;
+        }
+
         // Build availability results in the browser from raw timetable rows.
-        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods, includeCoveringCombos) {
+        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods, includeCoveringCombos, comboTimeBudgetMs) {
             const teacherNames = {};
             const busySet = new Set();
 
@@ -1087,15 +1102,14 @@
             return {
                 periods: results,
                 combinations: includeCoveringCombos
-                    ? findCoveringCombinations(results, selectedTeachers.length)
+                    ? findCoveringCombinations(results, selectedTeachers.length, comboTimeBudgetMs)
                     : [],
                 includeCoveringCombos: includeCoveringCombos
             };
         }
 
         // Find a small number of near-optimal covers within a fixed browser budget.
-        function findCoveringCombinations(results, selectedTeacherCount) {
-            const timeBudgetMs = 150;
+        function findCoveringCombinations(results, selectedTeacherCount, timeBudgetMs) {
             const beamWidth = 128;
             const candidateLimit = 60;
             const deadline = performance.now() + timeBudgetMs;
@@ -1171,7 +1185,7 @@
                 if (a.freeCount !== b.freeCount) return b.freeCount - a.freeCount;
                 return a.key.localeCompare(b.key, undefined, { numeric: true });
             });
-            return combinations.slice(0, 3);
+            return combinations.slice(0, 5);
         }
 
         // Display Common Frees Results
