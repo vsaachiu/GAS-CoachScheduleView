@@ -241,6 +241,27 @@
             font-size: 13px;
         }
 
+        .teacher-availability-summary {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .teacher-availability-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .teacher-availability-row:last-child {
+            border-bottom: none;
+        }
+
+        .teacher-availability-name {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
         .checkbox-list {
             max-height: 180px;
             overflow-y: auto;
@@ -261,6 +282,40 @@
 
         .checkbox-item input[type="checkbox"] {
             cursor: pointer;
+        }
+
+        .master-filter-section {
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            background: #fafafa;
+        }
+
+        .master-filter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 32px;
+            margin-top: 8px;
+        }
+
+        .master-filter-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px;
+            border: 1px solid #b8d8ef;
+            border-radius: 4px;
+            background: #f7fbfe;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+
+        .master-filter-empty {
+            color: #777;
+            font-size: 13px;
+            padding: 5px 0;
         }
 
         .free-period-card {
@@ -767,6 +822,16 @@
                                 <div id="period-checkboxes" class="checkbox-list"></div>
                             </div>
                         </div>
+                        <div class="master-filter-section">
+                            <div class="filter-card-header">
+                                <label>Day-Period Filter List:</label>
+                                <div class="select-actions">
+                                    <button class="btn-link" onclick="addSelectedDayPeriods()">Add selected day-periods</button>
+                                    <button class="btn-link" onclick="clearMasterDayPeriods()">Clear list</button>
+                                </div>
+                            </div>
+                            <div id="master-day-period-list" class="master-filter-list"></div>
+                        </div>
                         <div style="margin-top: 15px; display: flex; justify-content: flex-end; align-items: center; gap: 15px;">
                             <label class="checkbox-item" style="padding: 0;">
                                 <input type="checkbox" id="cover-all-combos">
@@ -839,6 +904,33 @@
             </div>
         </div>
     </div>
+
+    <div id="common-frees-export-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Export Common Frees</h3>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-item">
+                    <input type="radio" name="export-destination" value="new" checked onchange="toggleCommonFreesExportDestination()" style="width: auto;">
+                    New Google Sheet
+                </label>
+                <label class="checkbox-item">
+                    <input type="radio" name="export-destination" value="existing" onchange="toggleCommonFreesExportDestination()" style="width: auto;">
+                    Existing Google Sheet
+                </label>
+            </div>
+            <div id="existing-sheet-input-group" class="form-group" style="display: none;">
+                <label for="existing-sheet-reference">Google Sheet URL or ID:</label>
+                <input type="text" id="existing-sheet-reference" placeholder="Paste a Google Sheet URL or ID">
+            </div>
+            <div id="common-frees-export-result" style="font-size: 14px;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCommonFreesExportModal()">Cancel</button>
+                <button id="export-common-frees-button" class="btn btn-primary" onclick="exportCommonFrees()">Export</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Teacher Schedule Modal -->
     <div id="teacher-schedule-modal" class="teacher-schedule-modal">
@@ -871,12 +963,14 @@
         let observedRecords = [];
         let currentObservationTeacher = null;
         let currentCommonFreePeriods = [];
+        let masterDayPeriods = [];
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
             initializeTabs();
             loadDropdownOptions();
             loadObservedRecords();
+            renderMasterDayPeriods();
             
             // Set today's date as default
             document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
@@ -1004,11 +1098,70 @@
             });
         }
 
+        function addSelectedDayPeriods() {
+            const selectedDays = Array.from(document.querySelectorAll('#day-checkboxes input:checked')).map(cb => cb.value);
+            const selectedPeriods = Array.from(document.querySelectorAll('#period-checkboxes input:checked')).map(cb => cb.value);
+
+            if (selectedDays.length === 0 || selectedPeriods.length === 0) {
+                alert('Select at least one day and one period before adding to the filter list.');
+                return;
+            }
+
+            selectedDays.forEach(day => {
+                selectedPeriods.forEach(period => {
+                    if (!masterDayPeriods.some(item => item.day === day && item.period === period)) {
+                        masterDayPeriods.push({ day: day, period: period });
+                    }
+                });
+            });
+
+            selectAll('day-checkboxes', false);
+            selectAll('period-checkboxes', false);
+            renderMasterDayPeriods();
+        }
+
+        function removeMasterDayPeriod(index) {
+            masterDayPeriods.splice(index, 1);
+            renderMasterDayPeriods();
+        }
+
+        function clearMasterDayPeriods() {
+            masterDayPeriods = [];
+            renderMasterDayPeriods();
+        }
+
+        function renderMasterDayPeriods() {
+            const container = document.getElementById('master-day-period-list');
+            container.innerHTML = '';
+
+            if (masterDayPeriods.length === 0) {
+                const emptyState = document.createElement('span');
+                emptyState.className = 'master-filter-empty';
+                emptyState.textContent = 'No day-periods added.';
+                container.appendChild(emptyState);
+                return;
+            }
+
+            masterDayPeriods.forEach((item, index) => {
+                const filterItem = document.createElement('span');
+                filterItem.className = 'master-filter-item';
+                filterItem.textContent = `${item.day} - ${item.period}`;
+
+                const removeButton = document.createElement('button');
+                removeButton.className = 'btn-link';
+                removeButton.textContent = 'Remove';
+                removeButton.onclick = () => removeMasterDayPeriod(index);
+                filterItem.appendChild(removeButton);
+                container.appendChild(filterItem);
+            });
+        }
+
         // Find Common Frees (By Teacher View)
         function findCommonFrees() {
             const selectedTeachers = Array.from(document.querySelectorAll('#teacher-checkboxes input:checked')).map(cb => cb.value);
-            const selectedDays = Array.from(document.querySelectorAll('#day-checkboxes input:checked')).map(cb => cb.value);
-            const selectedPeriods = Array.from(document.querySelectorAll('#period-checkboxes input:checked')).map(cb => cb.value);
+            const selectedDayPeriods = masterDayPeriods.slice();
+            const selectedDays = [...new Set(selectedDayPeriods.map(item => item.day))];
+            const selectedPeriods = [...new Set(selectedDayPeriods.map(item => item.period))];
             const includeCoveringCombos = document.getElementById('cover-all-combos').checked;
             const comboTimeBudgetMs = getComboTimeBudget();
 
@@ -1016,12 +1169,8 @@
                 alert('Please select at least one teacher.');
                 return;
             }
-            if (selectedDays.length === 0) {
-                alert('Please select at least one day.');
-                return;
-            }
-            if (selectedPeriods.length === 0) {
-                alert('Please select at least one period.');
+            if (selectedDayPeriods.length === 0) {
+                alert('Add at least one day-period to the filter list.');
                 return;
             }
 
@@ -1035,8 +1184,7 @@
                     const results = processCommonFreeData(
                         data,
                         selectedTeachers,
-                        selectedDays,
-                        selectedPeriods,
+                        selectedDayPeriods,
                         includeCoveringCombos,
                         comboTimeBudgetMs
                     );
@@ -1059,7 +1207,7 @@
         }
 
         // Build availability results in the browser from raw timetable rows.
-        function processCommonFreeData(data, selectedTeachers, selectedDays, selectedPeriods, includeCoveringCombos, comboTimeBudgetMs) {
+        function processCommonFreeData(data, selectedTeachers, selectedDayPeriods, includeCoveringCombos, comboTimeBudgetMs) {
             const teacherNames = {};
             const busySet = new Set();
 
@@ -1072,31 +1220,29 @@
             });
 
             const results = [];
-            selectedDays.forEach(day => {
-                selectedPeriods.forEach(period => {
-                    const freeTeachers = [];
-                    const busyTeachers = [];
+            selectedDayPeriods.forEach(({ day, period }) => {
+                const freeTeachers = [];
+                const busyTeachers = [];
 
-                    selectedTeachers.forEach(email => {
-                        const teacher = {
-                            email: email,
-                            name: teacherNames[email] || email
-                        };
-                        if (busySet.has(`${email}|${day}|${period}`)) {
-                            busyTeachers.push(teacher);
-                        } else {
-                            freeTeachers.push(teacher);
-                        }
-                    });
+                selectedTeachers.forEach(email => {
+                    const teacher = {
+                        email: email,
+                        name: teacherNames[email] || email
+                    };
+                    if (busySet.has(`${email}|${day}|${period}`)) {
+                        busyTeachers.push(teacher);
+                    } else {
+                        freeTeachers.push(teacher);
+                    }
+                });
 
-                    results.push({
-                        day: day,
-                        period: period,
-                        freeTeachers: freeTeachers,
-                        busyTeachers: busyTeachers,
-                        freeCount: freeTeachers.length,
-                        totalSelectedCount: selectedTeachers.length
-                    });
+                results.push({
+                    day: day,
+                    period: period,
+                    freeTeachers: freeTeachers,
+                    busyTeachers: busyTeachers,
+                    freeCount: freeTeachers.length,
+                    totalSelectedCount: selectedTeachers.length
                 });
             });
 
@@ -1267,7 +1413,115 @@
             resultsList.innerHTML = html;
 
             const combinations = results.includeCoveringCombos ? buildCombinationHtml(results) : '';
-            resultsList.innerHTML = combinations + html;
+            const teacherAvailability = buildTeacherAvailabilityHtml(periods);
+            resultsList.innerHTML = combinations + html + teacherAvailability;
+        }
+
+        function getTeacherAvailabilityData(periods) {
+            const teachers = new Map();
+
+            periods.forEach(item => {
+                item.freeTeachers.forEach(teacher => {
+                    if (!teachers.has(teacher.email)) {
+                        teachers.set(teacher.email, { email: teacher.email, name: teacher.name, freePeriods: [], freePeriodKeys: new Set() });
+                    }
+                    teachers.get(teacher.email).freePeriods.push(`${item.day} - ${item.period}`);
+                    teachers.get(teacher.email).freePeriodKeys.add(`${item.day}|${item.period}`);
+                });
+                item.busyTeachers.forEach(teacher => {
+                    if (!teachers.has(teacher.email)) {
+                        teachers.set(teacher.email, { email: teacher.email, name: teacher.name, freePeriods: [], freePeriodKeys: new Set() });
+                    }
+                });
+            });
+
+            return Array.from(teachers.values()).sort((a, b) => {
+                if (b.freePeriods.length !== a.freePeriods.length) {
+                    return b.freePeriods.length - a.freePeriods.length;
+                }
+                return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            });
+        }
+
+        function buildTeacherAvailabilityHtml(periods) {
+            const rows = getTeacherAvailabilityData(periods).map(teacher => {
+                const freePeriods = teacher.freePeriods.length > 0
+                    ? teacher.freePeriods.join(', ')
+                    : 'No Frees.';
+                return `
+                    <div class="teacher-availability-row">
+                        <span class="teacher-availability-name">${teacher.name}:</span> ${freePeriods}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="teacher-availability-summary">
+                    <div class="teachers-group-header" style="margin-bottom: 6px;">
+                        <div class="section-title" style="font-size: 16px;">Selected Teacher Availability</div>
+                        <button class="btn btn-primary" onclick="openCommonFreesExportModal()">Export to Google Sheet</button>
+                    </div>
+                    ${rows}
+                </div>
+            `;
+        }
+
+        function openCommonFreesExportModal() {
+            if (currentCommonFreePeriods.length === 0) return;
+            document.getElementById('common-frees-export-result').innerHTML = '';
+            document.getElementById('common-frees-export-modal').style.display = 'block';
+            toggleCommonFreesExportDestination();
+        }
+
+        function closeCommonFreesExportModal() {
+            document.getElementById('common-frees-export-modal').style.display = 'none';
+        }
+
+        function toggleCommonFreesExportDestination() {
+            const destination = document.querySelector('input[name="export-destination"]:checked').value;
+            document.getElementById('existing-sheet-input-group').style.display = destination === 'existing' ? 'block' : 'none';
+        }
+
+        function buildCommonFreesExportValues() {
+            const periodLabels = currentCommonFreePeriods.map(item => `${item.day} - ${item.period}`);
+            const periodKeys = currentCommonFreePeriods.map(item => `${item.day}|${item.period}`);
+            const header = ['Teacher Email', 'Teacher Name'].concat(periodLabels);
+            const teacherRows = getTeacherAvailabilityData(currentCommonFreePeriods).map(teacher => {
+                return [teacher.email, teacher.name].concat(periodKeys.map(key => teacher.freePeriodKeys.has(key) ? 1 : 0));
+            });
+            return [header].concat(teacherRows);
+        }
+
+        function exportCommonFrees() {
+            const destination = document.querySelector('input[name="export-destination"]:checked').value;
+            const existingReference = document.getElementById('existing-sheet-reference').value.trim();
+            const result = document.getElementById('common-frees-export-result');
+            const exportButton = document.getElementById('export-common-frees-button');
+
+            if (destination === 'existing' && !existingReference) {
+                result.textContent = 'Paste a Google Sheet URL or ID.';
+                return;
+            }
+
+            exportButton.disabled = true;
+            result.textContent = 'Creating export...';
+            google.script.run
+                .withSuccessHandler(function(exportResult) {
+                    result.innerHTML = '';
+                    const link = document.createElement('a');
+                    link.href = exportResult.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.textContent = `Open ${exportResult.sheetName}`;
+                    result.appendChild(link);
+                    exportButton.disabled = false;
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Error exporting common frees:', error);
+                    result.textContent = 'Export failed. Check the destination sheet access and try again.';
+                    exportButton.disabled = false;
+                })
+                .exportCommonFrees(destination, existingReference, buildCommonFreesExportValues());
         }
 
         async function copyTeacherEmailsForPeriod(day, period, group) {

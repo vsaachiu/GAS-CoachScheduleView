@@ -198,6 +198,56 @@ function getCommonFreeData(selectedTeacherEmails, selectedDays, selectedPeriods)
   }
 }
 
+function exportCommonFrees(destination, existingSheetReference, values) {
+  if (!values || !values.length || !values[0].length) {
+    throw new Error('No Common Frees data is available to export.');
+  }
+
+  const spreadsheet = destination === 'existing'
+    ? SpreadsheetApp.openById(extractSpreadsheetId(existingSheetReference))
+    : SpreadsheetApp.create('Common Frees Export');
+  const sheetName = getUniqueSheetName(spreadsheet, 'Common Frees');
+  const sheet = destination === 'existing'
+    ? spreadsheet.insertSheet(sheetName)
+    : spreadsheet.getSheets()[0].setName(sheetName);
+  const rowCount = values.length;
+  const columnCount = values[0].length;
+
+  if (sheet.getMaxRows() < rowCount) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), rowCount - sheet.getMaxRows());
+  }
+  if (sheet.getMaxColumns() < columnCount) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), columnCount - sheet.getMaxColumns());
+  }
+
+  sheet.getRange(1, 1, rowCount, columnCount).setValues(values);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, columnCount).setFontWeight('bold').setBackground('#f3f3f3');
+  sheet.autoResizeColumns(1, columnCount);
+
+  return {
+    sheetName: sheetName,
+    url: spreadsheet.getUrl() + '#gid=' + sheet.getSheetId()
+  };
+}
+
+function extractSpreadsheetId(reference) {
+  const match = (reference || '').toString().match(/[a-zA-Z0-9-_]{25,}/);
+  if (!match) throw new Error('Enter a valid Google Sheet URL or ID.');
+  return match[0];
+}
+
+function getUniqueSheetName(spreadsheet, baseName) {
+  const existingNames = new Set(spreadsheet.getSheets().map(sheet => sheet.getName()));
+  if (!existingNames.has(baseName)) return baseName;
+
+  let index = 1;
+  while (existingNames.has(baseName + ' (' + index + ')')) {
+    index++;
+  }
+  return baseName + ' (' + index + ')';
+}
+
 // Add observation record
 function addObservation(teacherEmail, teacherName, date, className) {
   try {
